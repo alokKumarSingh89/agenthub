@@ -6,8 +6,7 @@ from fastapi.responses import JSONResponse
 
 
 class DatabaseHealthChecker(Protocol):
-    async def check_connection(self) -> None:
-        ...
+    async def check_connection(self) -> None: ...
 
 
 async def get_database(
@@ -29,7 +28,7 @@ async def health() -> dict[str, str]:
 
 @router.get("/ready")
 async def readiness(
-    database: DatabaseHealthChecker = Depends(get_database),
+    database: DatabaseHealthChecker = Depends(get_database),  # noqa: B008
 ) -> JSONResponse:
     try:
         await database.check_connection()
