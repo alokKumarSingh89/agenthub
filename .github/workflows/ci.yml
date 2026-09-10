@@ -8,37 +8,81 @@ on:
     branches:
       - main
 
-permissions:
-  contents: read
-
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  quality:
-    name: Quality
+  test:
+    name: Test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: agenthub
+          POSTGRES_PASSWORD: agenthub
+          POSTGRES_DB: agenthub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agenthub -d agenthub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python
+
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in {1..30}; do
+            if pg_isready \
+              -h 127.0.0.1 \
+              -p 5432 \
+              -U agenthub \
+              -d agenthub; then
+              echo "PostgreSQL is ready"
+              exit 0
+            fi
+
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
+          echo "PostgreSQL did not become ready"
+          exit 1
+
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
       - name: Ruff check
         run: ruff check .
+
       - name: Ruff format check
         run: ruff format --check .
+
       - name: Mypy
-        run: mypy
+        run: mypy apps packages
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://agenthub:agenthub@127.0.0.1:5432/agenthub
+        run: |
+          alembic upgrade head
+
       - name: Pytest
-        run: pytest -v
-
-
+        env:
+          DATABASE_URL: postgresql+asyncpg://agenthub:agenthub@127.0.0.1:5432/agenthub
+        run: |
+          pytest -v
