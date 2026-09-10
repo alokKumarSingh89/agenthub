@@ -10,6 +10,7 @@ from packages.database.base import Base
 from packages.database.types import TimestampMixin
 
 if TYPE_CHECKING:
+    from .permission import Permission
     from .user import User
 
 user_roles = Table(
@@ -49,5 +50,10 @@ class Role(TimestampMixin, Base):
 
     users: Mapped[list[User]] = relationship(
         secondary=user_roles,
+        back_populates="roles",
+    )
+
+    permissions: Mapped[list[Permission]] = relationship(
+        secondary="role_permissions",
         back_populates="roles",
     )

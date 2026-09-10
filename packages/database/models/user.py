@@ -10,6 +10,7 @@ from packages.database.base import Base
 from packages.database.types import TimestampMixin
 
 if TYPE_CHECKING:
+    from .credential import Credential
     from .organization import Organization
     from .role import Role
 
@@ -51,4 +52,10 @@ class User(TimestampMixin, Base):
     roles: Mapped[list[Role]] = relationship(
         secondary="user_roles",
         back_populates="users",
+    )
+
+    credential: Mapped[Credential] = relationship(
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
