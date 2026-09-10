@@ -19,6 +19,18 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
 
+    jwt_secret_key: str = Field(
+        default="development-only-change-this-secret",
+    )
+
+    jwt_algorithm: str = "HS256"
+
+    jwt_issuer: str = "agenthub"
+
+    jwt_audience: str = "agenthub-api"
+
+    access_token_ttl_minutes: int = 10
+
 
 @lru_cache
 def get_settings() -> Settings:
